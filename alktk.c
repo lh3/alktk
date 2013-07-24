@@ -267,7 +267,7 @@ int main_cat(int argc, char *argv[])
 		while ((ret = gzread(fp, rec, size)) == size) { // read a record
 			if (!fpout) {
 				// unpack the record with explicit pointer conversions
-				printf("%d\t%d\t%f", *(int32_t*)rec, *(int32_t*)(rec+4), *(double*)(rec+8));
+				printf("%d\t%d\t%f", 1 + *(int32_t*)rec, *(int32_t*)(rec+4), *(double*)(rec+8));
 				if (!is_pos_only) {
 					float *pf;
 					pf = (float*)(rec + 8 + sizeof(double)); // alias to the L(k) array
