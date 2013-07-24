@@ -216,6 +216,17 @@ int main_afs(int argc, char *argv[])
 	return 0;
 }
 
+/* a record is packed as follows:
+ *
+ * +----+----+--------+----+----+-   -+----+
+ * |CHR |POS |REF-AF  |L(0)|L(1)| ... |L(M)|
+ * +----+----+--------+----+----+-   -+----+
+ *
+ * where CHR is the index of chromsome in the 1000g reference file and
+ * L(k)=Pr{d|AC=k} is the non-reference allele likelihood. Each "-" represents
+ * a byte. The length of a record is "4+4+sizeof(double)+sizeof(float)*(M+1)".
+ * On almost all machines, it equals "16+4*(M+1)".
+ */
 int main_cat(int argc, char *argv[])
 {
 	gzFile fp, fpout = 0;
@@ -234,7 +245,7 @@ int main_cat(int argc, char *argv[])
 		uint8_t *rec;
 		int32_t ret, size, i;
 		fp = gzopen(argv[k], "r");
-		if (gzread(fp, &size, 4) != 4) continue;
+		if (gzread(fp, &size, 4) != 4) continue; // read the number of chromosomes
 		if (k > optind) {
 			if (M != size) {
 				fprintf(stderr, "[E::%s] `%s' has different number of chromosomes\n", __func__, argv[k]);
@@ -244,14 +255,15 @@ int main_cat(int argc, char *argv[])
 			M = size;
 			if (!is_text) gzwrite(fpout, &M, 4);
 		}
-		size = 4 + 4 + sizeof(double) + (M + 1) * sizeof(float);
+		size = 4 + 4 + sizeof(double) + (M + 1) * sizeof(float); // the size of a record
 		rec = malloc(size);
-		while ((ret = gzread(fp, rec, size)) == size) {
+		while ((ret = gzread(fp, rec, size)) == size) { // read a record
 			if (!fpout) {
+				// unpack the record with explicit pointer conversions
 				printf("%d\t%d\t%f", *(int32_t*)rec, *(int32_t*)(rec+4), *(double*)(rec+8));
 				if (!is_pos_only) {
 					float *pf;
-					pf = (float*)(rec + 8 + sizeof(double));
+					pf = (float*)(rec + 8 + sizeof(double)); // alias to the L(k) array
 					for (i = 0; i <= M; ++i) printf("\t%f", pf[i]);
 				}
 				putchar('\n');
