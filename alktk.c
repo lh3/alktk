@@ -223,8 +223,8 @@ int main_afs(int argc, char *argv[])
  * +----+----+--------+----+----+-   -+----+
  *
  * where CHR is the index of chromsome in the 1000g reference file and
- * L(k)=Pr{d|AC=k} is the non-reference allele likelihood. Each "-" represents
- * a byte. The length of a record is "4+4+sizeof(double)+sizeof(float)*(M+1)".
+ * L(k)=Pr{d|AC=k} is the reference allele likelihood. Each "-" represents a
+ * byte. The length of a record is "4+4+sizeof(double)+sizeof(float)*(M+1)".
  * On almost all machines, it equals "16+4*(M+1)".
  */
 int main_cat(int argc, char *argv[])
