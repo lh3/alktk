@@ -7,7 +7,7 @@
 #include <assert.h>
 #include "kvec.h"
 #include "kseq.h"
-KSEQ_INIT(gzFile, gzread)
+KSTREAM_INIT(gzFile, gzread, 16384)
 
 unsigned char seq_nt16_table[256] = {
 	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
