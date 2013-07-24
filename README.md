@@ -1,6 +1,6 @@
 ####Downloading and compiling
 
-    git clone https://github.com/lh3/alktk.git
+    git clone git://github.com/lh3/alktk.git
     (cd alktk; gcc -g -O2 -Wall -lz -o alktk alktk.c)
 
 ####Generating .alk files
