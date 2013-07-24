@@ -167,7 +167,7 @@ int main_afs(int argc, char *argv[])
 			x = strtod(p+1, &q);
 			kv_push(double, phi, x);
 		}
-		ks_destroy(fp);
+		ks_destroy(ks);
 		gzclose(fp);
 		for (i = 0, sum = 0.; i <= phi.n; ++i) sum += phi.a[i];
 		for (i = 0; i <= phi.n; ++i) phi.a[i] /= sum;
@@ -175,8 +175,8 @@ int main_afs(int argc, char *argv[])
 	fp = strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
 	gzread(fp, &M, 4);
 	if (phi.n) { // then check consistency
-		if (phi.n != M) {
-			fprintf(stderr, "[E::%s] inconsistent number of chromosomes: %d != %ld\n", __func__, M, phi.n);
+		if (phi.n != M + 1) {
+			fprintf(stderr, "[E::%s] inconsistent number of chromosomes: %d != %ld\n", __func__, M+1, phi.n);
 			free(phi.a);
 			gzclose(fp);
 			return 1;
