@@ -54,7 +54,10 @@ int main_sites(int argc, char *argv[])
 	while ((c = getopt(argc, argv, "")) >= 0) {
 	}
 	if (optind + 2 > argc) {
-		fprintf(stderr, "Usage: alktk sites <in.alk> <in.srt.list>\n");
+		fprintf(stderr, "\n");
+		fprintf(stderr, "Usage: alktk sites <in.alk> <in.srt.list>\n\n");
+		fprintf(stderr, "Note: Each line of <in.srt.list> consists of 1-based chr index, position and\n");
+		fprintf(stderr, "      a zero or one indicating whether the reference allele is ancestral.\n\n");
 		return 1;
 	}
 	{ // read the sites
@@ -67,22 +70,26 @@ int main_sites(int argc, char *argv[])
 		ks = ks_init(fp);
 		while (ks_getuntil(ks, KS_SEP_LINE, &str, &dret) >= 0) {
 			char *p, *q, *r;
-			int n = 0, chr = -1, pos = -1, anc = -1, het = -1, tmp;
+			int n = 0, chr = -1, pos = -1, anc = -1, het = -1, flip = -1, is_digit = -1, tmp;
 			p = str.s;
 			for (q = str.s + 1;; ++q) {
 				if (isspace(*q) || *q == 0) {
 					if (n == 0) chr = strtol(p, &r, 10);
 					else if (n == 1) pos = strtol(p, &r, 10);
-					else if (n == 2) anc = seq_nt16_table[(uint8_t)*p];
-					else if (n == 3) het = seq_nt16_table[(uint8_t)*p];
+					else if (n == 2) {
+						anc = seq_nt16_table[(uint8_t)*p];
+						is_digit = isdigit(*p);
+						flip = is_digit? (*p != '0') : (bitcnt_table[anc] == 2);
+					} else if (n == 3) het = seq_nt16_table[(uint8_t)*p];
 					++n; p = q + 1;
 					if (*q == 0) break;
 				}
 			}
-			if (n < 3 || chr < 0 || pos < 0 || anc < 0) continue;
+			if (n < 3 || chr < 0 || pos < 0 || is_digit < 0) continue;
 			tmp = bitcnt_table[anc];
 			--chr;
-			if (het > 0 && bitcnt_table[het|anc] != 2) continue;
+			if (!is_digit && bitcnt_table[anc] > 2) continue;
+			if (n >= 4 && !is_digit && bitcnt_table[het|anc] != 2) continue;
 			if (chr >= sites.m) {
 				int i, oldm = sites.m;
 				kv_resize(sites_t, sites, chr + 1);
@@ -90,9 +97,9 @@ int main_sites(int argc, char *argv[])
 					memset(&sites.a[i].list, 0, sizeof(kvec_t(int)));
 			}
 			if (chr >= sites.n) sites.n = chr + 1;
-			tmp = tmp == 1? pos : -pos;
+			tmp = flip? -pos : pos;
 			kv_push(int, sites.a[chr].list, tmp);
-			//fprintf(stderr, "%s | %d,%d,%d,%d | %ld\n", str.s, chr, pos, anc, het, sites.n);
+			//fprintf(stderr, "%s | %d,%d,%d,%d | %d\n", str.s, chr, pos, anc, het, flip);
 		}
 		ks_destroy(ks);
 		gzclose(fp);
