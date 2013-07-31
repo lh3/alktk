@@ -30,21 +30,11 @@ unsigned char seq_nt16_table[256] = {
 
 int bitcnt_table[] = { 4, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
 
-typedef kvec_t(int) ivec_t;
+typedef kvec_t(uint64_t) vec64_t;
 
 typedef struct {
-	ivec_t list;
+	vec64_t bits;
 } sites_t;
-
-int binary_search_abs(int A[], int key, int imin, int imax)
-{
-	while (imin < imax) {
-		int imid = (imin + imax) >> 1;
-		if (abs(A[imid]) < key) imin = imid + 1;
-		else imax = imid;
-	}
-	return imax == imin && abs(A[imin]) == key? imin : -1;
-}
 
 int main_sites(int argc, char *argv[])
 {
@@ -71,6 +61,7 @@ int main_sites(int argc, char *argv[])
 		while (ks_getuntil(ks, KS_SEP_LINE, &str, &dret) >= 0) {
 			char *p, *q, *r;
 			int n = 0, chr = -1, pos = -1, anc = -1, het = -1, flip = -1, is_digit = -1, tmp;
+			vec64_t *ptr;
 			p = str.s;
 			for (q = str.s + 1;; ++q) {
 				if (isspace(*q) || *q == 0) {
@@ -94,11 +85,15 @@ int main_sites(int argc, char *argv[])
 				int i, oldm = sites.m;
 				kv_resize(sites_t, sites, chr + 1);
 				for (i = oldm; i < sites.m; ++i)
-					memset(&sites.a[i].list, 0, sizeof(kvec_t(int)));
+					memset(&sites.a[i].bits, 0, sizeof(kvec_t(int)));
 			}
 			if (chr >= sites.n) sites.n = chr + 1;
-			tmp = flip? -pos : pos;
-			kv_push(int, sites.a[chr].list, tmp);
+			ptr = &sites.a[chr].bits;
+			tmp = ptr->m;
+			kv_resize(uint64_t, *ptr, pos/32 + 1);
+			if (tmp < ptr->m)
+				memset(ptr->a + tmp, 0, (ptr->m - tmp) * 8);
+			ptr->a[pos/32] |= (flip? 3ULL : 1ULL) << (pos%32*2);
 			//fprintf(stderr, "%s | %d,%d,%d,%d | %d\n", str.s, chr, pos, anc, het, flip);
 		}
 		ks_destroy(ks);
@@ -117,16 +112,16 @@ int main_sites(int argc, char *argv[])
 		size = 4 + 4 + sizeof(double) + (M + 1) * sizeof(float);
 		rec = malloc(size);
 		while ((ret = gzread(fp, rec, size)) == size) {
-			int ret, chr, pos;
-			ivec_t *p;
+			int chr, pos, x;
+			vec64_t *p;
 
 			chr = *(int32_t*)rec;
 			pos = *(int32_t*)(rec+4) + 1;
 			assert(chr < sites.n);
-			p = &sites.a[chr].list;
-			ret = binary_search_abs(p->a, pos, 0, (int)p->n - 1);
-			if (ret < 0) continue;
-			if (p->a[ret] < 0) {
+			p = &sites.a[chr].bits;
+			x = p->a[pos/32] >> (pos%32*2) & 3;
+			if (x == 0) continue;
+			if (x == 3) {
 				double *pd = (double*)(rec+8);
 				float tmp, *pf = (float*)(rec + 8 + sizeof(double));
 				int i, end = (M + 1) >> 1;
